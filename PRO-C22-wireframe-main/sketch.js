@@ -2,69 +2,133 @@ const Engine = Matter.Engine;
 const World = Matter.World;
 const Bodies = Matter.Bodies;
 const Constraint = Matter.Constraint;
-var engine, world,ground;
-var bgimg, torre, canon;
-var torreimg,solo;
-var bola,angulo;
+var engine, world,ground,opcoes,torre,canhao;
+var backgroundImg,torreImg;
+var angle ;
+var bola;
 var bolas = [];
+var navio1;
+var navios = [];
+var naviosAnimacao = [];
+var naviosJson, imagemNavio;
+var naviosFrame;
+
+
 function preload() {
-
-  bgimg = loadImage("./assets/background.gif");
-  torreimg = loadImage("./assets/tower.png");
-
+ backgroundImg = loadImage("./assets/background.gif");
+ torreImg = loadImage("./assets/tower.png");
+ naviosJson = loadJSON("./assets/boat/boat.json");
+ imagemNavio = loadImage("./assets/boat/boat.png");
 }
 function setup() {
 
   canvas = createCanvas(1200, 600);
   engine = Engine.create();
   world = engine.world;
-  
-  angleMode(DEGREES);
-  angulo = 15
-  var options ={
-    isStatic:true
-  }
-  solo = Bodies.rectangle(0,height-1,width*2,1,options);
-  World.add(world,solo)
- 
-  torre = Bodies.rectangle(160,350,160,310,options);
-  World.add(world,torre);
 
-  canon = new Canon(180,110,130,100,angulo);
+  angleMode(DEGREES);
+  angle=15;
   
- 
+  canhao = new Cannon(180,110,130,100,angle);
+
+
+ opcoes={
+   isStatic: true
+ } 
+ground = Bodies.rectangle(0,height-1,width * 2,1,opcoes);
+World.add(world,ground);
+
+
+torre = Bodies.rectangle(160,350,160,310,opcoes);
+ World.add(world,torre);
+
+ naviosFrame = naviosJson.frames;
+ for(var i = 0; i < naviosFrame.length;i = i + 1){
+   var pos = naviosFrame[i].position;
+   var img = imagemNavio.get(pos.x,pos.y,pos.w,pos.h);
+   naviosAnimacao.push(img);
+ }
 }
 
 function draw() {
-  image(bgimg,0,0,width,height);
+  image(backgroundImg,0,0,1200,600);
  
   Engine.update(engine);
-  
-  rect(solo.position.x,solo.position.y,2400,1); 
+
+  rect(ground.position.x,ground.position.y,width * 2,1);
+
   push();
   imageMode(CENTER);
-  image(torreimg,torre.position.x,torre.position.y,160,310);
+  image(torreImg,torre.position.x,torre.position.y,160,310);
   pop();
 
-  canon.display();
-  for(var i =0; i<bolas.length; i++){
-    showBalls(bolas[i],i)
+  mostrarNavios();
+
+  for(var i = 0; i < bolas.length;i = i + 1){
+    mostrarBolas(bolas[i],i);
+    colisaoNavios(i);
   }
+
+  canhao.display();
+  
+   
 }
 
 function keyReleased(){
-  if (keyCode ===DOWN_ARROW){
-    bolas[bolas.length-1].shoot();
+  if(keyCode===DOWN_ARROW ){
+    bolas[bolas.length - 1].shoot();
   }
 }
 
 function keyPressed(){
-  if (keyCode ===DOWN_ARROW){
-    bola = new Ball(canon.x, canon.y);
+  if(keyCode===DOWN_ARROW){
+    bola = new Ball(canhao.x,canhao.y);
     bolas.push(bola);
   }
 }
 
-function showBalls(bola,i){
-  if (bola){bola.display();}
+function mostrarBolas(bola,i){
+  if(bola){
+    bola.display();
+    if(bola.body.position.x >= width || bola.body.position.y >= height -50){
+      bola.remove(i);
+    }
+  }
+
+}
+
+function mostrarNavios(){
+  if(navios.length>0){
+    if(navios[navios.length-1]===undefined||navios[navios.length-1].body.position.x < width-300){
+      var positions = [-40,-60,-70,-20]
+      var position = random(positions);
+      navio1 = new Navio(width,height-100,170,170,position,naviosAnimacao);
+    navios.push(navio1);
+    }
+    for(var i = 0; i<navios.length; i = i + 1){
+      if(navios[i]){
+        Matter.Body.setVelocity(navios[i].body,{x:-0.9,y:0});
+        navios[i].display();
+        navios[i].animate();
+      }
+      
+    }
+  }
+  else{
+    navio1 = new Navio(width-79,height-60,170,170,-80,naviosAnimacao);
+    navios.push(navio1);
+  }
+}
+
+function colisaoNavios(index){
+for(var i  = 0;i < navios.length; i = i + 1){
+  if(bolas[index]!==undefined && navios[i]!==undefined){
+    var colisao = Matter.SAT.collides(bolas[index].body,navios[i].body);
+    if(colisao.collided){
+      navios[i].remove(i);
+      Matter.World.remove(world,bolas[index].body);
+      delete bolas[index];
+    }
+  }
+}
 }
